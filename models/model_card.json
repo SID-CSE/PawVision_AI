@@ -1,0 +1,21 @@
+{
+  "selected_model": "MobileNetV2 (fine-tuned)",
+  "input_size": 224,
+  "classes": [
+    "Cat",
+    "Dog"
+  ],
+  "output": "sigmoid = P(Dog); label Dog if >= 0.5",
+  "preprocessing": "RGB, EXIF-rotate, longest side<=256, tf.image.resize(antialias) to input size, rescaling inside model",
+  "test_metrics": {
+    "accuracy": 0.9893190921228304,
+    "precision": 0.9877594465141033,
+    "recall": 0.990923651895355,
+    "f1": 0.9893390191897654,
+    "roc_auc": 0.999667166344956,
+    "inference_ms_per_img": 2.3757263854236044,
+    "model_size_MB": 21.731705
+  },
+  "seed": 42,
+  "trained_on_images": 17474
+}
