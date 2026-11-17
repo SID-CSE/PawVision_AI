@@ -10,7 +10,7 @@ PawVision AI is a Streamlit application that classifies cat and dog photos using
 
 [Live demo](#live-demo) — https://paw-vision-ai.streamlit.app/
 
-`docs/screenshot.png`
+![Project Screenshot](./docs/screenshoy.png)
 
 ## Features
 
