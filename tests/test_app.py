@@ -42,10 +42,15 @@ class AppSmokeTests(unittest.TestCase):
         self.assertFalse(app.exception)
         self.assertFalse(app.error)
         self.assertEqual(app.radio(key="page").value, "Dashboard")
-        for page in ["Image Classifier", "Prediction History", "Model Insights", "How It Works", "About", "Settings"]:
+        for page in ["Image Classifier", "Folder Evaluation", "Prediction History", "Model Insights", "How It Works", "About", "Settings"]:
             app.radio(key="page").set_value(page).run(timeout=120)
             self.assertFalse(app.exception, page)
             self.assertFalse(app.error, page)
+        app.radio(key="page").set_value("Image Classifier").run(timeout=120)
+        app.radio(key="classifier_mode").set_value("Batch prediction").run(timeout=120)
+        self.assertFalse(app.exception)
+        self.assertTrue(any(button.label == "Predict all images" for button in app.button))
+        self.assertTrue(any(uploader.key == "batch_uploads" for uploader in app.get("file_uploader")))
         app.radio(key="page").set_value("Settings").run(timeout=120)
         app.slider(key="threshold").set_value(0.90).run(timeout=120)
         self.assertEqual(app.session_state["threshold"], 0.90)
@@ -72,7 +77,7 @@ class PredictionTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             open_uploaded_image(data.getvalue())
 
-    def test_confidence_threshold_does_not_change_class(self) -> None:
+    def test_confidence_threshold_abstains_without_changing_candidate(self) -> None:
         class Model:
             input_shape = (None, 224, 224, 3)
 
@@ -83,11 +88,24 @@ class PredictionTests(unittest.TestCase):
             confident = predict_image(Model(), Image.new("RGB", (32, 32)), min_confidence=0.59)
             uncertain = predict_image(Model(), Image.new("RGB", (32, 32)), min_confidence=0.70)
         self.assertEqual(confident["label"], "Dog")
-        self.assertEqual(uncertain["label"], "Dog")
+        self.assertEqual(uncertain["label"], "Uncertain")
+        self.assertEqual(uncertain["candidate_label"], "Dog")
         self.assertFalse(confident["uncertain"])
         self.assertTrue(uncertain["uncertain"])
         self.assertAlmostEqual(uncertain["confidence"], 0.6)
         self.assertAlmostEqual(uncertain["prob_cat"], 0.4)
+
+    def test_default_confidence_threshold_is_seventy_percent(self) -> None:
+        class Model:
+            input_shape = (None, 224, 224, 3)
+
+            def predict(self, batch, verbose=0):
+                return np.array([[0.65]])
+
+        with patch("src.predict.preprocess_image", return_value=np.zeros((1, 1))):
+            result = predict_image(Model(), Image.new("RGB", (32, 32)))
+        self.assertEqual(result["label"], "Uncertain")
+        self.assertEqual(result["candidate_label"], "Dog")
 
 
 if __name__ == "__main__":

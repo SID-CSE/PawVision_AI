@@ -16,7 +16,8 @@ Screenshot placeholder: `docs/screenshot.png` (not yet available).
 
 - Upload JPG, JPEG, PNG, WEBP, BMP, or GIF images up to 10 MB.
 - View the predicted class, confidence, and Cat/Dog probabilities.
-- Mark predictions below a configurable confidence threshold as uncertain.
+- Abstain from Cat/Dog predictions when confidence is below a configurable threshold or the experimental feature-distance check flags an image.
+- Evaluate images in `cats/` and `dogs/` with per-image results, filters, charts, and abstention-aware metrics.
 - Review, download, or clear the current session's prediction history.
 - Explore model results, the inference pipeline, and project details in dedicated workspace pages.
 - Adjust the confidence threshold, probability display, and light or dark theme for the current session.
@@ -109,12 +110,27 @@ secrets, datasets, debug models, or caches are staged.
 
 Upload → validate → correct EXIF orientation and convert to RGB → cap the longest side at
 256 pixels → resize to 224 × 224 with antialiasing → MobileNetV2 → sigmoid probability →
-label and confidence. Pixel rescaling is part of the model. Dog is selected when P(Dog) is
-at least 0.5; otherwise Cat is selected. The separate confidence threshold controls the
-uncertain indicator, not the underlying class decision.
+candidate label and confidence. Pixel rescaling is part of the model. Dog is the candidate
+when P(Dog) is at least 0.5; otherwise Cat is the candidate. The final result is Uncertain
+if confidence is below the configured threshold (70% by default) or an experimental feature-distance
+check flags it. The check compares penultimate-layer embeddings with a small reference set from
+`cats/` and `dogs/`, excluding the image itself during batch evaluation. Its cutoff is the 95th
+percentile of reference leave-one-out nearest-neighbor distances. This is a provisional heuristic,
+not a validated out-of-distribution detector; if unavailable, the app warns and uses confidence only.
+The bundled images are also used as references, so their batch results are not independent validation.
 
 Uploads must be nonempty, decodable images with a shorter side of at least 32 pixels and a
 file size no greater than 10 MiB. Images with transparency or grayscale are converted to RGB.
+
+## Dataset evaluation
+
+The Dataset Evaluation page discovers JPG, JPEG, PNG and WEBP files under `cats/` and `dogs/`,
+processes them in batches, and reports unreadable or unsupported files separately. Folder names
+provide the actual labels. Accuracy is correct predictions divided by all evaluated images, including
+abstentions. Coverage is the share receiving a Cat/Dog prediction; selective accuracy is correctness
+among those predictions. Cat and Dog accuracy are per-class recall. Precision, recall, and F1 use Dog
+as the positive class; an abstention for an actual Dog is a false negative. The confusion matrix
+includes an Uncertain prediction column. Undefined scores are shown as N/A.
 
 ## Data and methodology
 
@@ -128,8 +144,8 @@ pretrained on ImageNet and fine-tuned after training its classification head.
 
 ## Limitations
 
-- Only cats and dogs are supported; other subjects are still assigned one of the two classes.
-- Confidence is not a guarantee of correctness or a reliable out-of-distribution detector.
+- The model was trained only for cats and dogs. Unrelated images may still receive a confident Cat or Dog result, even with the experimental distance check.
+- Neither confidence nor the experimental detector guarantees correctness or reliable out-of-distribution detection. The 70% threshold and distance cutoff have not been tuned on an independent validation and unrelated-image dataset.
 - Multiple animals, occlusion, unusual images, and mislabeled examples can cause errors.
 - The comparison reflects one run per model and does not establish statistical significance.
 
